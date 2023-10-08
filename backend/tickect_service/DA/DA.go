@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lapayka/rsoi-lab2/ticket-service/structs"
+	"github.com/lapayka/rsoi-2/ticket-service/structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

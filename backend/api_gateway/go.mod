@@ -1,4 +1,4 @@
-module github.com/lapayka/rsoi-lab2/api-gateway
+module github.com/lapayka/rsoi-2/api-gateway
 
 go 1.21.1
 

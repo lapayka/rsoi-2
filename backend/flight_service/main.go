@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/lapayka/rsoi-lab2/flight-service/DA"
+	"github.com/lapayka/rsoi-2/flight-service/DA"
 )
 
 type GateWay struct {

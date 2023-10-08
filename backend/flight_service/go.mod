@@ -1,4 +1,4 @@
-module github.com/lapayka/rsoi-lab2/flight-service
+module github.com/lapayka/rsoi-2/flight-service
 
 go 1.21.1
 

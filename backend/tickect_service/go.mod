@@ -1,4 +1,4 @@
-module github.com/lapayka/rsoi-lab2/ticket-service
+module github.com/lapayka/rsoi-2/ticket-service
 
 go 1.21.1
 

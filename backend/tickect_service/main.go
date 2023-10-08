@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/lapayka/rsoi-lab2/ticket-service/DA"
+	"github.com/lapayka/rsoi-2/ticket-service/DA"
 )
 
 type GateWay struct {

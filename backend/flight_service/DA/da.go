@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/lapayka/rsoi-lab2/flight-service/Structs"
+	"github.com/lapayka/rsoi-2/flight-service/Structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
