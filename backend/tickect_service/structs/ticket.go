@@ -12,3 +12,9 @@ type Ticket struct {
 func (Ticket) TableName() string {
 	return "ticket"
 }
+
+type Tickets []Ticket
+
+func (Tickets) TableName() string {
+	return "ticket"
+}

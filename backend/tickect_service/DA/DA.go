@@ -24,10 +24,18 @@ func New(host, user, db_name, password string) (*DB, error) {
 	return &DB{db: db}, nil
 }
 
-func (db *DB) GetTicketByUUID(uuid string) (structs.Ticket, error) {
-	ticket := structs.Ticket{TicketUuid: uuid}
+func (db *DB) GetTicketByUUID(uuid, username string) (structs.Ticket, error) {
+	ticket := structs.Ticket{TicketUuid: uuid, Username: username}
 
 	err := db.db.First(&ticket).Error
 
 	return ticket, err
+}
+
+func (db *DB) GetTicketsByUsername(username string) (structs.Tickets, error) {
+	tickets := structs.Tickets{}
+
+	err := db.db.Find(&tickets).Where(&structs.Ticket{Username: username}).Error
+
+	return tickets, err
 }

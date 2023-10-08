@@ -15,6 +15,7 @@ func main() {
 	router.HandleFunc("/api/v1/me", bonus_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", bonus_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", ticket_proxy).Methods("Get")
+	router.HandleFunc("/api/v1/tickets", ticket_proxy).Methods("Get")
 
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {

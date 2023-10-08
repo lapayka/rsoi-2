@@ -22,6 +22,7 @@ func main() {
 	gw := GateWay{db}
 
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.getTicketByUUID).Methods("Get")
+	router.HandleFunc("/api/v1/tickets", gw.getTicketsByUsername).Methods("Get")
 
 	err := http.ListenAndServe(":8070", router)
 	if err != nil {
@@ -42,17 +43,32 @@ func WriteSerializable(item any, w http.ResponseWriter) {
 	w.Write(bytes)
 }
 
-func (gw *GateWay) getTicketByUUID(w http.ResponseWriter, r *http.Request) {
+func (gw *GateWay) getTicketByUUIDAndUserName(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ticketUid := vars["ticketUid"]
+	username := r.Header.Get("X-User-Name")
 
-	ticket, err := gw.db.GetTicketByUUID(ticketUid)
+	ticket, err := gw.db.GetTicketByUUID(ticketUid, username)
 
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		WriteSerializable(ticket, w)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func (gw *GateWay) getTicketsByUsername(w http.ResponseWriter, r *http.Request) {
+	username := r.Header.Get("X-User-Name")
+
+	tickets, err := gw.db.GetTicketsByUsername(username)
+
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		WriteSerializable(tickets, w)
 		w.WriteHeader(http.StatusOK)
 	}
 }
