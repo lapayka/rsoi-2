@@ -1,4 +1,4 @@
-package Structs
+package FS_structs
 
 import (
 	"time"

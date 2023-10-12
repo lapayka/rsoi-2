@@ -1,10 +1,10 @@
-package DA
+package TS_DA
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/lapayka/rsoi-2/ticket-service/structs"
+	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -24,18 +24,18 @@ func New(host, user, db_name, password string) (*DB, error) {
 	return &DB{db: db}, nil
 }
 
-func (db *DB) GetTicketByUUID(uuid, username string) (structs.Ticket, error) {
-	ticket := structs.Ticket{TicketUuid: uuid, Username: username}
+func (db *DB) GetTicketByUUID(uuid, username string) (TS_structs.Ticket, error) {
+	ticket := TS_structs.Ticket{TicketUuid: uuid, Username: username}
 
 	err := db.db.First(&ticket).Error
 
 	return ticket, err
 }
 
-func (db *DB) GetTicketsByUsername(username string) (structs.Tickets, error) {
-	tickets := structs.Tickets{}
+func (db *DB) GetTicketsByUsername(username string) (TS_structs.Tickets, error) {
+	tickets := TS_structs.Tickets{}
 
-	err := db.db.Find(&tickets).Where(&structs.Ticket{Username: username}).Error
+	err := db.db.Find(&tickets).Where(&TS_structs.Ticket{Username: username}).Error
 
 	return tickets, err
 }

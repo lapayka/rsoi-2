@@ -1,46 +1,32 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/lapayka/rsoi-2/ticket-service/DA"
+	http_utils "github.com/lapayka/rsoi-2/Common/HTTP_Utils"
+	TS_DA "github.com/lapayka/rsoi-2/tickect_service/DA"
 )
 
 type GateWay struct {
-	db *DA.DB
+	db *TS_DA.DB
 	//logger *slog.Logger
 }
 
 func main() {
 	router := mux.NewRouter()
 
-	db, _ := DA.New("localhost", "postgres", "tickets", "1234")
+	db, _ := TS_DA.New("localhost", "postgres", "tickets", "1234")
 	gw := GateWay{db}
 
-	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.getTicketByUUID).Methods("Get")
+	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.getTicketByUUIDAndUserName).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", gw.getTicketsByUsername).Methods("Get")
 
 	err := http.ListenAndServe(":8070", router)
 	if err != nil {
 		//gw.logger.Error("failed to run app", "error", err)
 	}
-}
-
-func ReadSerializable(r *http.Request, item any) error {
-	buff, _ := io.ReadAll(r.Body)
-
-	err := json.Unmarshal(buff, item)
-
-	return err
-}
-
-func WriteSerializable(item any, w http.ResponseWriter) {
-	bytes, _ := json.Marshal(item)
-	w.Write(bytes)
 }
 
 func (gw *GateWay) getTicketByUUIDAndUserName(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +40,7 @@ func (gw *GateWay) getTicketByUUIDAndUserName(w http.ResponseWriter, r *http.Req
 		fmt.Println(err)
 		w.WriteHeader(http.StatusNotFound)
 	} else {
-		WriteSerializable(ticket, w)
+		http_utils.WriteSerializable(ticket, w)
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -68,7 +54,7 @@ func (gw *GateWay) getTicketsByUsername(w http.ResponseWriter, r *http.Request) 
 		fmt.Println(err)
 		w.WriteHeader(http.StatusNotFound)
 	} else {
-		WriteSerializable(tickets, w)
+		http_utils.WriteSerializable(tickets, w)
 		w.WriteHeader(http.StatusOK)
 	}
 }

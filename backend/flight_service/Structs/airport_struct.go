@@ -1,4 +1,4 @@
-package Structs
+package FS_structs
 
 type Airport struct {
 	ID      int64  `json:"id"`
