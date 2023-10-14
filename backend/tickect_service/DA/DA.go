@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/lapayka/rsoi-2/Common/Logger"
 	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -25,7 +26,7 @@ func New(host, user, db_name, password string) (*DB, error) {
 }
 
 func (db *DB) GetTicketByUUID(uuid, username string) (TS_structs.Ticket, error) {
-	ticket := TS_structs.Ticket{TicketUuid: uuid, Username: username}
+	ticket := TS_structs.Ticket{TicketUid: uuid, Username: username}
 
 	err := db.db.First(&ticket).Error
 
@@ -38,4 +39,36 @@ func (db *DB) GetTicketsByUsername(username string) (TS_structs.Tickets, error) 
 	err := db.db.Find(&tickets).Where(&TS_structs.Ticket{Username: username}).Error
 
 	return tickets, err
+}
+
+func (db *DB) CreateTicket(ticket TS_structs.Ticket) error {
+	err := db.db.Create(&ticket).Error
+
+	if err != nil {
+		Logger.GetLogger().Print(err)
+	}
+
+	return err
+}
+
+func (db *DB) DeleteTicket(ticket TS_structs.Ticket) error {
+	tx := db.db.Begin()
+	err := tx.First(&ticket).Error
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	ticket.Status = "CANCELED"
+	err = tx.Save(&ticket).Error
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+
+	return err
 }

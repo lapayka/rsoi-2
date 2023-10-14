@@ -49,3 +49,44 @@ func (db *DB) GetPrivilegeAndHistoryByUserName(username string) (PS_structs.Priv
 
 	return PS_structs.Privilege_with_history{Privilege_info: p, History: transactions}, err
 }
+
+func (db *DB) CreateTicket(username string, price int64, is_paid_from_balance bool, privelege_item PS_structs.Privilege_history) error {
+	privelege := PS_structs.Privilege{Username: username}
+
+	tx := db.db.Begin()
+	err := tx.First(&privelege).Error
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	privelege_item.BalanceDiff = 0
+	privelege_item.PrivilegeID = privelege.ID
+	if is_paid_from_balance {
+		diff := price
+		if price > privelege.Balance {
+			diff = privelege.Balance
+		}
+		privelege.Balance -= diff
+		privelege_item.BalanceDiff = diff
+
+		err = tx.Save(&privelege).Error
+
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	err = tx.Create(&privelege_item).Error
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+
+	return nil
+}
