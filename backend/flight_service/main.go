@@ -19,6 +19,7 @@ func main() {
 	db, _ := FS_DA.New("localhost", "postgres", "flights", "1234")
 	gw := GateWay{db}
 
+	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
 	router.HandleFunc("/api/v1/flights", gw.getFlights).Methods("Get")
 
 	err := http.ListenAndServe(":8060", router)

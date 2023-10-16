@@ -28,6 +28,7 @@ func main() {
 
 	gw := GateWay{db}
 
+	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.getTicketByUUIDAndUserName).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", gw.getTicketsByUsername).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", gw.createTicket).Methods("Post")

@@ -19,9 +19,9 @@ import (
 func main() {
 	router := mux.NewRouter()
 
+	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
 	router.HandleFunc("/api/v1/flights", flight_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/me", bonus_proxy).Methods("Get")
-	router.HandleFunc("/api/v1/tickets", bonus_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", ticket_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", ticket_proxy).Methods("Get")
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", ticket_proxy).Methods("DELETE")

@@ -26,3 +26,7 @@ func WriteSerializable(item any, w http.ResponseWriter) {
 	bytes, _ := json.Marshal(item)
 	w.Write(bytes)
 }
+
+func HealthCkeck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}

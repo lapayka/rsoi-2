@@ -23,6 +23,7 @@ func main() {
 	db, _ := PS_DA.New("localhost", "postgres", "bonus", "1234")
 	gw := GateWay{db}
 
+	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
 	router.HandleFunc("/api/v1/me", gw.getPrivilegeAndHistory).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", gw.getHistory).Methods("Get")
 	router.HandleFunc("/api/v1/tickets", gw.buyTicket).Methods("Post")

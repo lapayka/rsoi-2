@@ -45,7 +45,7 @@ func (d *DB) GetFlights() (FS_structs.Flights, error) {
 	flights := FS_structs.Flights{}
 
 	joinres := []joinRes{}
-	d.db.Table("flight").Select("flight.id, flight.flight_number, flight.datetime, fa.id, fa.name, fa.city, fa.country, ta.id, ta.name, ta.city, ta.country").Joins("JOIN airport fa on flight.from_airport_id = fa.id").Joins("JOIN airport ta on flight.to_airport_id = ta.id").Scan(&joinres)
+	d.db.Table("flight").Select("flight.id, flight.flight_number, flight.datetime as date, fa.id as From_Airport_ID, fa.name as From_Airport_Name, fa.city as From_Airport_City, fa.country as From_Airport_Country, ta.id as To_Airport_ID, ta.name as To_Airport_Name, ta.city as To_Airport_City, ta.country as To_Airport_Country").Joins("JOIN airport fa on flight.from_airport_id = fa.id").Joins("JOIN airport ta on flight.to_airport_id = ta.id").Scan(&joinres)
 
 	for _, res := range joinres {
 		flights = append(flights, FS_structs.Flight{ID: res.ID, FlightNumber: res.FlightNumber, Date: res.Date, FromAirport: FS_structs.Airport{ID: res.FromAirportID, Name: res.FromAirportName, City: res.FromAirportCity, Country: res.FromAirportCountry}, ToAirport: FS_structs.Airport{ID: res.ToAirportID, Name: res.ToAirportName, City: res.ToAirportCity, Country: res.ToAirportCountry}})
