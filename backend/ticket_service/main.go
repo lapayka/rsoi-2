@@ -8,8 +8,8 @@ import (
 	DTO "github.com/lapayka/rsoi-2/Common"
 	http_utils "github.com/lapayka/rsoi-2/Common/HTTP_Utils"
 	"github.com/lapayka/rsoi-2/Common/Logger"
-	TS_DA "github.com/lapayka/rsoi-2/tickect_service/DA"
-	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
+	TS_DA "github.com/lapayka/rsoi-2/ticket_service/DA"
+	TS_structs "github.com/lapayka/rsoi-2/ticket_service/structs"
 )
 
 type GateWay struct {

@@ -17,16 +17,27 @@ jobs:
 
       - uses: docker/setup-buildx-action@v2
 
-      # TODO build and run unit tests
-
       - name: Build images
         timeout-minutes: 10
-        run: docker compose build
+        run: |
+          docker-compose build postgres
+          docker-compose build api_gateway
+          docker-compose build flight_service
+          docker-compose build privilege-service
+          docker-compose build ticket_service
 
       - name: Run containers
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
-          docker compose up -d
+          docker-compose up -d api_gateway
+          docker-compose up -d flight_service
+          docker-compose up -d privilege-service
+          docker-compose up -d ticket_service
+
+          docker-compose logs api_gateway
+          docker-compose logs flight_service
+          docker-compose logs privilege-service
+          docker-compose logs ticket_service
           ./scripts/wait-script.sh
         env:
           WAIT_PORTS: 8080,8070,8060,8050

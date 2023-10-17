@@ -13,7 +13,7 @@ import (
 	http_utils "github.com/lapayka/rsoi-2/Common/HTTP_Utils"
 	"github.com/lapayka/rsoi-2/Common/Logger"
 	FS_structs "github.com/lapayka/rsoi-2/flight_service/Structs"
-	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
+	TS_structs "github.com/lapayka/rsoi-2/ticket_service/structs"
 )
 
 func main() {
@@ -136,7 +136,6 @@ func buy_ticket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ticket, err := buy_ticket_in_ticket_service(username, buy_ticket_info)
-
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -144,7 +143,6 @@ func buy_ticket(w http.ResponseWriter, r *http.Request) {
 	buy_ticket_info.TicketUid = ticket.TicketUid
 
 	err = buy_ticket_in_privilege_service(username, buy_ticket_info)
-
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

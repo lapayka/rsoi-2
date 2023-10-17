@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/lapayka/rsoi-2/Common/Logger"
-	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
+	TS_structs "github.com/lapayka/rsoi-2/ticket_service/structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

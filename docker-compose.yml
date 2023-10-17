@@ -14,7 +14,53 @@ services:
     ports:
       - "5432:5432"
 
-# TODO добавить сервисы
+  privilege-service:
+    image: privilege-service
+    container_name: privilege-service
+    restart: on-failure
+    build:
+      context: backend
+      dockerfile: privilege-service/Dockerfile
+    ports:
+      - "8050:8050"
+    depends_on:
+      - postgres
+
+  flight_service:
+    image: flight_service
+    container_name: flight_service
+    restart: on-failure
+    build:
+      context: backend
+      dockerfile: flight_service/Dockerfile
+    ports:
+      - "8060:8060"
+    depends_on:
+      - postgres
+
+  ticket_service:
+    image: ticket_service
+    container_name: ticket_service
+    restart: on-failure
+    build:
+      context: backend
+      dockerfile: ticket_service/Dockerfile
+    ports:
+      - "8070:8070"
+    depends_on:
+      - postgres
+
+  api_gateway:
+    image: api_gateway
+    container_name: api_gateway
+    restart: on-failure
+    build:
+      context: backend
+      dockerfile: api_gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
 
 volumes:
   db-data:
