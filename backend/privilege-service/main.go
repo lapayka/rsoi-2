@@ -20,7 +20,7 @@ type GateWay struct {
 func main() {
 	router := mux.NewRouter()
 
-	db, _ := PS_DA.New("localhost", "postgres", "bonus", "1234")
+	db, _ := PS_DA.New("postgres", "postgres", "bonus", "postgres")
 	gw := GateWay{db}
 
 	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")

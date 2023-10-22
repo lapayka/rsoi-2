@@ -20,7 +20,7 @@ type GateWay struct {
 func main() {
 	router := mux.NewRouter()
 
-	db, err := TS_DA.New("localhost", "postgres", "tickets", "1234")
+	db, err := TS_DA.New("postgres", "postgres", "tickets", "postgres")
 	if err != nil {
 		Logger.GetLogger().Print(err)
 		return

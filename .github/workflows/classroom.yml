@@ -26,6 +26,15 @@ jobs:
           docker-compose build privilege-service
           docker-compose build ticket_service
 
+      - name: Setup db
+        run: |
+          docker-compose up -d postgres
+          docker-compose logs postgres
+          sleep 5
+          cd backend/DB_Scripts
+          psql "user=postgres hostaddr=127.0.0.1 port=5432 password=postgres" < create_databases.sql
+          psql "user=postgres hostaddr=127.0.0.1 port=5432 password=postgres" < create_tables.sql
+
       - name: Run containers
         timeout-minutes: 10
         run: |
