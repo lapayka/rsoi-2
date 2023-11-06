@@ -41,8 +41,8 @@ func (db *DB) GetTicketsByUsername(username string) (TS_structs.Tickets, error) 
 	return tickets, err
 }
 
-func (db *DB) CreateTicket(ticket TS_structs.Ticket) error {
-	err := db.db.Create(&ticket).Error
+func (db *DB) CreateTicket(ticket *TS_structs.Ticket) error {
+	err := db.db.Create(ticket).Error
 
 	if err != nil {
 		Logger.GetLogger().Print(err)
@@ -51,9 +51,9 @@ func (db *DB) CreateTicket(ticket TS_structs.Ticket) error {
 	return err
 }
 
-func (db *DB) DeleteTicket(ticket TS_structs.Ticket) error {
+func (db *DB) DeleteTicket(ticket *TS_structs.Ticket) error {
 	tx := db.db.Begin()
-	err := tx.First(&ticket).Error
+	err := tx.First(ticket).Error
 
 	if err != nil {
 		tx.Rollback()
@@ -61,7 +61,7 @@ func (db *DB) DeleteTicket(ticket TS_structs.Ticket) error {
 	}
 
 	ticket.Status = "CANCELED"
-	err = tx.Save(&ticket).Error
+	err = tx.Save(ticket).Error
 
 	if err != nil {
 		tx.Rollback()

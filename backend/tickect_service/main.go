@@ -44,9 +44,14 @@ func (gw *GateWay) deleteTicket(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ticketUid := vars["ticketUid"]
 	username := r.Header.Get("X-User-Name")
+	if username == "" || ticketUid == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	ticket := TS_structs.Ticket{Username: username, TicketUid: ticketUid}
 
-	err := gw.db.DeleteTicket(ticket)
+	err := gw.db.DeleteTicket(&ticket)
 
 	if err != nil {
 		Logger.GetLogger().Println(err)
@@ -54,22 +59,19 @@ func (gw *GateWay) deleteTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http_utils.WriteSerializable(&ticket, w)
 	w.WriteHeader(http.StatusOK)
 }
 
 func (gw *GateWay) createTicket(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("X-User-Name")
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	buy_ticket_info := DTO.BuyTicketDTO{}
+	http_utils.ReadSerializable(r, &buy_ticket_info)
 
 	ticket := TS_structs.Ticket{TicketUid: uuid.New().String(), Username: username, FlightNumber: buy_ticket_info.FlightNumber, Price: buy_ticket_info.Price, Status: "PAID"}
 
-	err = gw.db.CreateTicket(ticket)
+	err := gw.db.CreateTicket(&ticket)
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,21 +13,72 @@ import (
 	DTO "github.com/lapayka/rsoi-2/Common"
 	http_utils "github.com/lapayka/rsoi-2/Common/HTTP_Utils"
 	"github.com/lapayka/rsoi-2/Common/Logger"
+	"github.com/lapayka/rsoi-2/api_gateway/circuit_breaker"
 	FS_structs "github.com/lapayka/rsoi-2/flight_service/Structs"
 	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
 )
 
+type Query struct {
+	Service *circuit_breaker.CircuitBreaker
+	Request http.Request
+}
+
+type GateWay struct {
+	ticket_service    circuit_breaker.CircuitBreaker
+	privilege_service circuit_breaker.CircuitBreaker
+	flight_service    circuit_breaker.CircuitBreaker
+
+	Queue *list.List
+}
+
+func (gw *GateWay) CleanQuery() {
+	queue_tmp := list.New()
+	Logger.GetLogger().Println("Enter into delayed requests")
+
+	for gw.Queue.Len() > 0 {
+		e := gw.Queue.Front()
+		query := Query(e.Value.(Query))
+
+		fmt.Printf("Trying to %s %s%s\n", query.Request.Method, query.Service.Host, query.Request.URL.String())
+		resp, err := query.Service.SendQuery(&query.Request)
+
+		if err != nil || resp.StatusCode != http.StatusInternalServerError {
+			queue_tmp.PushBack(query)
+		}
+		gw.Queue.Remove(e)
+		fmt.Println(gw.Queue.Len())
+	}
+
+	gw.Queue = queue_tmp
+}
+
+func SetTimer(gw *GateWay) {
+	timer := time.NewTimer(10 * time.Second)
+	go func() {
+		<-timer.C
+		gw.CleanQuery()
+		SetTimer(gw)
+	}()
+}
+
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
-	router.HandleFunc("/api/v1/flights", flight_proxy).Methods("Get")
-	router.HandleFunc("/api/v1/me", bonus_proxy).Methods("Get")
-	router.HandleFunc("/api/v1/tickets/{ticketUid}", ticket_proxy).Methods("Get")
-	router.HandleFunc("/api/v1/tickets", ticket_proxy).Methods("Get")
-	router.HandleFunc("/api/v1/tickets/{ticketUid}", ticket_proxy).Methods("DELETE")
+	_privelege_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8050"}
+	_flight_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8060"}
+	_ticket_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8070"}
+	gw := GateWay{ticket_service: _ticket_service, privilege_service: _privelege_service, flight_service: _flight_service, Queue: list.New()}
 
-	router.HandleFunc("/api/v1/tickets", buy_ticket).Methods("Post")
+	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
+	router.HandleFunc("/api/v1/flights", gw.flight_service.ProxyQuery).Methods("Get")
+	router.HandleFunc("/api/v1/me", gw.privilege_service.ProxyQuery).Methods("Get")
+	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.ticket_service.ProxyQuery).Methods("Get")
+	router.HandleFunc("/api/v1/tickets", gw.ticket_service.ProxyQuery).Methods("Get")
+
+	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.delete_ticket).Methods("DELETE")
+	router.HandleFunc("/api/v1/tickets", gw.buy_ticket).Methods("Post")
+
+	SetTimer(&gw)
 
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {
@@ -41,9 +93,32 @@ func GetDefaultClient() *http.Client {
 	return client
 }
 
-func check_flght_number(flight_number string) bool {
-	req, _ := http.NewRequest("GET", "http://localhost:8060/api/v1/flights", nil)
-	r, err := GetDefaultClient().Do(req)
+func (gw *GateWay) delete_ticket(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.String())
+	req, _ := http.NewRequest("DELETE", r.URL.String(), nil)
+	resp, err := gw.ticket_service.SendQuery(req)
+
+	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	ticket := TS_structs.Ticket{}
+	http_utils.ReadSerializableFromResponse(resp, &ticket)
+
+	resp, err = gw.privilege_service.SendQuery(req)
+
+	if err != nil || (resp != nil && resp.StatusCode == http.StatusInternalServerError) {
+		Logger.GetLogger().Print(fmt.Sprintf("Delaying delete ticket from p_service %s", r.URL.String()))
+		query := Query{Service: &gw.privilege_service, Request: *req}
+		gw.Queue.PushBack(query)
+	}
+}
+
+func (gw *GateWay) check_flght_number(flight_number string) bool {
+	req, _ := http.NewRequest("GET", "/api/v1/flights", nil)
+	var r *http.Response
+	r, err := gw.flight_service.SendQuery(req)
 
 	if err != nil {
 		Logger.GetLogger().Print(err)
@@ -67,11 +142,11 @@ func check_flght_number(flight_number string) bool {
 	return false
 }
 
-func buy_ticket_in_ticket_service(username string, buy_ticket_info DTO.BuyTicketDTO) (TS_structs.Ticket, error) {
+func (gw *GateWay) buy_ticket_in_ticket_service(username string, buy_ticket_info DTO.BuyTicketDTO) (TS_structs.Ticket, error) {
 	body, _ := json.Marshal(buy_ticket_info)
 	reader := strings.NewReader(string(body))
 
-	req, err := http.NewRequest("POST", "http://localhost:8070/api/v1/tickets", reader)
+	req, err := http.NewRequest("POST", "/api/v1/tickets", reader)
 	req.Header.Add("X-User-Name", username)
 
 	if err != nil {
@@ -80,7 +155,7 @@ func buy_ticket_in_ticket_service(username string, buy_ticket_info DTO.BuyTicket
 	}
 
 	var r *http.Response
-	r, err = GetDefaultClient().Do(req)
+	r, err = gw.ticket_service.SendQuery(req)
 
 	if err != nil {
 		Logger.GetLogger().Print(err)
@@ -98,11 +173,11 @@ func buy_ticket_in_ticket_service(username string, buy_ticket_info DTO.BuyTicket
 	return ticket, nil
 }
 
-func buy_ticket_in_privilege_service(username string, buy_ticket_info DTO.BuyTicketDTO) error {
+func (gw *GateWay) buy_ticket_in_privilege_service(username string, buy_ticket_info DTO.BuyTicketDTO) error {
 	body, _ := json.Marshal(buy_ticket_info)
 	reader := strings.NewReader(string(body))
 
-	req, err := http.NewRequest("POST", "http://localhost:8050/api/v1/tickets", reader)
+	req, err := http.NewRequest("POST", "/api/v1/tickets", reader)
 	req.Header.Add("X-User-Name", username)
 
 	if err != nil {
@@ -111,7 +186,7 @@ func buy_ticket_in_privilege_service(username string, buy_ticket_info DTO.BuyTic
 	}
 
 	var r *http.Response
-	r, err = GetDefaultClient().Do(req)
+	r, err = gw.privilege_service.SendQuery(req)
 
 	if err != nil {
 		Logger.GetLogger().Print(err)
@@ -125,17 +200,17 @@ func buy_ticket_in_privilege_service(username string, buy_ticket_info DTO.BuyTic
 	return fmt.Errorf("status code was: %d\n", r.StatusCode)
 }
 
-func buy_ticket(w http.ResponseWriter, r *http.Request) {
+func (gw *GateWay) buy_ticket(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("X-User-Name")
 
 	buy_ticket_info := DTO.BuyTicketDTO{}
 	http_utils.ReadSerializable(r, &buy_ticket_info)
 
-	if !check_flght_number(buy_ticket_info.FlightNumber) {
+	if !gw.check_flght_number(buy_ticket_info.FlightNumber) {
 		w.WriteHeader(http.StatusNotFound)
 	}
 
-	ticket, err := buy_ticket_in_ticket_service(username, buy_ticket_info)
+	ticket, err := gw.buy_ticket_in_ticket_service(username, buy_ticket_info)
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -143,9 +218,13 @@ func buy_ticket(w http.ResponseWriter, r *http.Request) {
 	}
 	buy_ticket_info.TicketUid = ticket.TicketUid
 
-	err = buy_ticket_in_privilege_service(username, buy_ticket_info)
+	err = gw.buy_ticket_in_privilege_service(username, buy_ticket_info)
 
 	if err != nil {
+		req, _ := http.NewRequest("DELETE", "/api/v1/tickets/"+ticket.TicketUid, nil)
+		req.Header.Add("X-User-Name", username)
+		gw.ticket_service.SendQuery(req)
+
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

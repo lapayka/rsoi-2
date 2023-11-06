@@ -1,9 +1,11 @@
 package PS_DA
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
+	"github.com/lapayka/rsoi-2/Common/Logger"
 	PS_structs "github.com/lapayka/rsoi-2/privilege-service/structs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -54,7 +56,10 @@ func (db *DB) CreateTicket(username string, price int64, is_paid_from_balance bo
 	privelege := PS_structs.Privilege{Username: username}
 
 	tx := db.db.Begin()
-	err := tx.First(&privelege).Error
+	err := tx.Where("username = ?", username).First(&privelege).Error
+
+	tmp, _ := json.Marshal(privelege)
+	fmt.Println(string(tmp))
 
 	if err != nil {
 		tx.Rollback()
@@ -70,13 +75,15 @@ func (db *DB) CreateTicket(username string, price int64, is_paid_from_balance bo
 		}
 		privelege.Balance -= diff
 		privelege_item.BalanceDiff = diff
+	} else {
+		privelege.Balance = privelege.Balance + price/10
+	}
 
-		err = tx.Save(&privelege).Error
+	err = tx.Save(&privelege).Error
 
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
+	if err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	err = tx.Create(&privelege_item).Error
@@ -87,6 +94,44 @@ func (db *DB) CreateTicket(username string, price int64, is_paid_from_balance bo
 	}
 
 	tx.Commit()
+
+	return nil
+}
+
+func (db *DB) DeleteTicket(ticket_uuid string, price int64) error {
+	privelege_item := PS_structs.Privilege_history{}
+
+	tx := db.db.Begin()
+	err := tx.Where("ticket_uid = ?", ticket_uuid).First(&privelege_item).Error
+
+	if err != nil {
+		tx.Rollback()
+		Logger.GetLogger().Println(err)
+		return err
+	}
+	privelege := PS_structs.Privilege{}
+	tx.First(&privelege, privelege_item.PrivilegeID)
+
+	diff := int64(0)
+	if privelege_item.OperationType == "FILL_IN_BALANCE" {
+		diff = -privelege_item.BalanceDiff
+	} else {
+		diff = price / 10
+	}
+	privelege.Balance -= diff
+
+	err = tx.Save(&privelege).Error
+	if err != nil {
+		tx.Rollback()
+		Logger.GetLogger().Println(err)
+		return err
+	}
+	err = tx.Delete(&privelege_item, privelege_item.ID).Error
+	if err != nil {
+		tx.Rollback()
+		Logger.GetLogger().Println(err)
+		return err
+	}
 
 	return nil
 }
