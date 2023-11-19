@@ -5,6 +5,7 @@ go 1.21.1
 require (
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/mux v1.8.0
+	github.com/rabbitmq/amqp091-go v1.9.0
 	gorm.io/driver/postgres v1.5.3
 	gorm.io/gorm v1.25.5
 )

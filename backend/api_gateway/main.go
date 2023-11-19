@@ -16,6 +16,8 @@ import (
 	"github.com/lapayka/rsoi-2/api_gateway/circuit_breaker"
 	FS_structs "github.com/lapayka/rsoi-2/flight_service/Structs"
 	TS_structs "github.com/lapayka/rsoi-2/tickect_service/structs"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Query struct {
@@ -29,6 +31,10 @@ type GateWay struct {
 	flight_service    circuit_breaker.CircuitBreaker
 
 	Queue *list.List
+
+	rabbit_conn  *amqp.Connection
+	rabbit_chan  *amqp.Channel
+	rabbit_queue amqp.Queue
 }
 
 func (gw *GateWay) CleanQuery() {
@@ -67,7 +73,37 @@ func main() {
 	_privelege_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8050"}
 	_flight_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8060"}
 	_ticket_service := circuit_breaker.CircuitBreaker{Host: "http://localhost:8070"}
-	gw := GateWay{ticket_service: _ticket_service, privilege_service: _privelege_service, flight_service: _flight_service, Queue: list.New()}
+
+	// Rabbit init
+	// -------------------------------------------------------------------
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		Logger.GetLogger().Print(err)
+		defer conn.Close()
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		Logger.GetLogger().Print(err)
+		defer ch.Close()
+		return
+	}
+
+	q, err := ch.QueueDeclare("tickets", false, false, false, false, nil)
+	if err != nil {
+		Logger.GetLogger().Print(err)
+		return
+	}
+	// -------------------------------------------------------------------
+
+	gw := GateWay{ticket_service: _ticket_service,
+		privilege_service: _privelege_service,
+		flight_service:    _flight_service,
+		Queue:             list.New(),
+		rabbit_conn:       conn,
+		rabbit_chan:       ch,
+		rabbit_queue:      q}
 
 	router.HandleFunc("/manage/health", http_utils.HealthCkeck).Methods("Get")
 	router.HandleFunc("/api/v1/flights", gw.flight_service.ProxyQuery).Methods("Get")
@@ -80,7 +116,7 @@ func main() {
 
 	SetTimer(&gw)
 
-	err := http.ListenAndServe(":8080", router)
+	err = http.ListenAndServe(":8080", router)
 	if err != nil {
 		Logger.GetLogger().Print(err)
 	}
@@ -94,25 +130,21 @@ func GetDefaultClient() *http.Client {
 }
 
 func (gw *GateWay) delete_ticket(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("-->delete_ticket")
 	fmt.Println(r.URL.String())
 	req, _ := http.NewRequest("DELETE", r.URL.String(), nil)
-	resp, err := gw.ticket_service.SendQuery(req)
-
-	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+	resp, _ := gw.ticket_service.SendQuery(req)
+	//if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
+	//	w.WriteHeader(http.StatusNotFound)
+	//	return
+	//}
 
 	ticket := TS_structs.Ticket{}
 	http_utils.ReadSerializableFromResponse(resp, &ticket)
-
-	resp, err = gw.privilege_service.SendQuery(req)
-
-	if err != nil || (resp != nil && resp.StatusCode == http.StatusInternalServerError) {
-		Logger.GetLogger().Print(fmt.Sprintf("Delaying delete ticket from p_service %s", r.URL.String()))
-		query := Query{Service: &gw.privilege_service, Request: *req}
-		gw.Queue.PushBack(query)
-	}
+	tmp, _ := json.Marshal(ticket)
+	_ = gw.rabbit_chan.Publish("", gw.rabbit_queue.Name, false, false, amqp.Publishing{
+		Body: tmp,
+	})
 }
 
 func (gw *GateWay) check_flght_number(flight_number string) bool {
