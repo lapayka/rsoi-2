@@ -59,7 +59,7 @@ func (gw *GateWay) deleteTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http_utils.WriteSerializable(&ticket, w)
+	http_utils.WriteSerializable(ticket, w)
 	w.WriteHeader(http.StatusOK)
 }
 

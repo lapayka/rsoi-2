@@ -126,6 +126,8 @@ func (db *DB) DeleteTicket(ticket_uuid string, price int64) error {
 		Logger.GetLogger().Println(err)
 		return err
 	}
+
+	fmt.Printf("Deleting %d ticket\n", privelege_item.ID)
 	err = tx.Delete(&privelege_item, privelege_item.ID).Error
 	if err != nil {
 		tx.Rollback()

@@ -26,6 +26,15 @@ type GateWay struct {
 	rabbit_queue amqp.Queue
 }
 
+func SetTimer(gw *GateWay) {
+	timer := time.NewTimer(10 * time.Second)
+	go func() {
+		<-timer.C
+		gw.deleteTicket()
+		SetTimer(gw)
+	}()
+}
+
 func main() {
 	router := mux.NewRouter()
 
@@ -65,7 +74,7 @@ func main() {
 	router.HandleFunc("/api/v1/tickets", gw.buyTicket).Methods("Post")
 	//router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.deleteTicket).Methods("DELETE")
 
-	gw.deleteTicket()
+	SetTimer(&gw)
 
 	err = http.ListenAndServe(":8050", router)
 	if err != nil {
@@ -81,15 +90,11 @@ func (gw *GateWay) deleteTicket() {
 		Logger.GetLogger().Print(err)
 	}
 
-	fmt.Println("Consume")
-
-	var forever chan struct{}
-
 	go func() {
 		for d := range msgs {
 			ticket := TS_structs.Ticket{}
 			_ = json.Unmarshal(d.Body, &ticket)
-
+			fmt.Printf("handling %s ticket\n", ticket.TicketUid)
 			fmt.Println(string(d.Body))
 
 			err := gw.db.DeleteTicket(ticket.TicketUid, ticket.Price)
@@ -99,8 +104,6 @@ func (gw *GateWay) deleteTicket() {
 			}
 		}
 	}()
-
-	<-forever
 }
 
 func (gw *GateWay) buyTicket(w http.ResponseWriter, r *http.Request) {

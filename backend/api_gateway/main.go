@@ -114,7 +114,7 @@ func main() {
 	router.HandleFunc("/api/v1/tickets/{ticketUid}", gw.delete_ticket).Methods("DELETE")
 	router.HandleFunc("/api/v1/tickets", gw.buy_ticket).Methods("Post")
 
-	SetTimer(&gw)
+	//SetTimer(&gw)
 
 	err = http.ListenAndServe(":8080", router)
 	if err != nil {
@@ -133,16 +133,18 @@ func (gw *GateWay) delete_ticket(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("-->delete_ticket")
 	fmt.Println(r.URL.String())
 	req, _ := http.NewRequest("DELETE", r.URL.String(), nil)
-	resp, _ := gw.ticket_service.SendQuery(req)
-	//if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
-	//	w.WriteHeader(http.StatusNotFound)
-	//	return
-	//}
+	req.Header.Set("X-User-Name", r.Header.Get("X-User-Name"))
+	resp, err := gw.ticket_service.SendQuery(req)
+	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	ticket := TS_structs.Ticket{}
 	http_utils.ReadSerializableFromResponse(resp, &ticket)
 	tmp, _ := json.Marshal(ticket)
-	_ = gw.rabbit_chan.Publish("", gw.rabbit_queue.Name, false, false, amqp.Publishing{
+	fmt.Println(string(tmp))
+	gw.rabbit_chan.Publish("", gw.rabbit_queue.Name, false, false, amqp.Publishing{
 		Body: tmp,
 	})
 }

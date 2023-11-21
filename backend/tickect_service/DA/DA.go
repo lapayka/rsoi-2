@@ -53,7 +53,7 @@ func (db *DB) CreateTicket(ticket *TS_structs.Ticket) error {
 
 func (db *DB) DeleteTicket(ticket *TS_structs.Ticket) error {
 	tx := db.db.Begin()
-	err := tx.First(ticket).Error
+	err := tx.Where("ticket_uid = ?", ticket.TicketUid).First(ticket).Error
 
 	if err != nil {
 		tx.Rollback()
