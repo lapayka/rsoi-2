@@ -2,10 +2,7 @@ name: GitHub Classroom Workflow
 on:
   push:
     branches:
-      - master
-  pull_request:
-    branches:
-      - master
+      - lab3_test
 jobs:
   build:
     name: Autograding
@@ -31,18 +28,17 @@ jobs:
         env:
           WAIT_PORTS: 8080,8070,8060,8050
 
-      - name: Run API Tests
-        uses: matt-ball/newman-action@master
-        with:
-          # TODO insert your variant
-          collection: 1/postman/collection.json
-          environment: 1/postman/environment.json
-          delayRequest: 100
-          reporters: '[ "cli" ]'
+      # TODO setup variant, service and port
 
-      - uses: education/autograding@v1
-        id: autograder
-        continue-on-error: true
+      - name: Run API Tests
+        timeout-minutes: 5
+        run: |
+          chmod +x ./scripts/test-script.sh
+          ./scripts/test-script.sh
+        env:
+          VARIANT: v1
+          SERVICE_NAME: bonus-service
+          PORT_NUMBER: 8080
 
       - name: Stop containers
         if: always()
